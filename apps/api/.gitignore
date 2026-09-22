@@ -1,0 +1,7 @@
+# 端到端测试自动下载的 embedded-postgres ICU 运行时缓存（见 tests/support/embedded-pg.ts）
+node_modules/.embedded-pg-libs/
+**/node_modules/@embedded-postgres/*/.embedded-pg-libs/
+
+# 嵌入式 PostgreSQL 临时数据目录
+.pg-data/
+*.tmp.ts

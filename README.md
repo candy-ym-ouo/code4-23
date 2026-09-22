@@ -90,6 +90,27 @@ node ops/smoke-test.mjs
 
 建议只在专用验收数据库执行该脚本，因为它会留下测试业务数据。
 
+### 端到端测试（真实 PostgreSQL）
+
+`apps/api` 的 `tests/e2e-*.test.ts` 通过 `embedded-postgres`（内嵌的真实 PostgreSQL 16 二进制）启动一次性集群、执行全部 SQL migration，再经 Fastify `inject` 走完 HTTP → 事务 → SQL 约束的完整链路。无需本机安装 PostgreSQL：
+
+```bash
+pnpm --filter @handcraft/api test
+```
+
+用例之间用 `TRUNCATE ... CASCADE` 清空业务表实现数据隔离，文件与用例全部串行执行，不产生跨用例数据泄漏。覆盖场景：
+
+- 单位换算：同族单位（kg/g、m/cm/mm）换算记账、不可整除（超出 6 位小数精度）拒绝、跨单位族拒绝。
+- 幂等重试：相同 `Idempotency-Key` 串行与并发重试都只扣减一次，回放同一资源。
+- 事务回滚：库存不足/无效需求时消耗、流水、审计、批次版本、项目自动启动全部回滚。
+- 并发扣减：`SELECT ... FOR UPDATE` 串行化下恰好扣尽与超额扣减均不出现负余额或超卖。
+- 撤销恢复：`REVERSAL` 追加式回补等量库存、耗尽批次恢复 ACTIVE、重复撤销拒绝、撤销后可重新消耗。
+- 数据隔离：批次/材料/项目维度互不串数据、查询过滤严格、未认证请求被拒绝、用例间无泄漏。
+
+每个场景结束后都会运行一组账本不变量校验（流水勾稽 `before+signed=after`、余额等于流水重放结果、余额非负、状态与余额一致、消耗与流水一一对应、幂等键唯一等）；失败时错误信息会明确指出被破坏的不变量编号（如 `[I3-BATCH-BALANCE-EQUALS-LEDGER]`）及违规行。
+
+> 在 Debian bookworm 等较新系统上，内嵌的 buster 时代二进制缺少 ICU 60 运行库，测试引导（`tests/support/embedded-pg.ts`）会自动从 Ubuntu 官方软件源下载 `libicu60` 并以 `LD_LIBRARY_PATH` 方式加载，不改动系统环境；需要网络与 `curl`、`dpkg-deb`。
+
 ## 业务一致性
 
 - 批次是库存的最小核算单位，材料列表只做聚合。
