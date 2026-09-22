@@ -60,6 +60,11 @@ jobs:
       - run: pnpm --filter @handcraft/contracts build
       - run: pnpm --filter @handcraft/api build
       - run: pnpm --filter @handcraft/api db:migrate
+      # E2E 走真实 PostgreSQL（TEST_DATABASE_URL 优先于嵌入式实例），
+      # 覆盖单位换算、幂等重试、事务回滚、并发扣减、撤销恢复与数据隔离。
+      - run: pnpm --filter @handcraft/api test:e2e
+        env:
+          TEST_DATABASE_URL: postgresql://handcraft:integration-password@127.0.0.1:5432/handcraft
       - run: |
           node apps/api/dist/server.js &
           API_PID=$!

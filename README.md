@@ -78,6 +78,22 @@ pnpm test
 pnpm build
 ```
 
+针对真实 PostgreSQL 的端到端测试（单位换算、幂等重试、事务回滚、并发扣减、撤销恢复、数据隔离）：
+
+```bash
+# 有 PostgreSQL 时指过去即可
+TEST_DATABASE_URL=postgresql://handcraft:change-me@localhost:55432/handcraft \
+  pnpm --filter @handcraft/api test:e2e
+
+# 没有也可以：不设 DATABASE_URL 时套件以当前用户启动嵌入式 PostgreSQL 16，
+# 临时数据目录在结束后自动清理，无需 root 或 docker
+pnpm --filter @handcraft/api test:e2e
+```
+
+E2E 用例在每步操作后直接核对数据库不变量（余额非负、流水前后衔接且累计等于批次余额、
+幂等键唯一、撤销等额恢复、跨实体归属一致等）；任何一条被破坏，失败信息都会点名具体不变量与证据。
+细节见 [`apps/api/tests/e2e/README.md`](apps/api/tests/e2e/README.md)。
+
 对已初始化的运行环境执行完整 API 验收链：
 
 ```bash

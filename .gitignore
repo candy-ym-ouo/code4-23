@@ -11,6 +11,7 @@ coverage/
 # Runtime data
 uploads/
 backups/
+.e2e-native-libs/
 *.log
 pnpm-debug.log*
 

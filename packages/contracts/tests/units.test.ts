@@ -26,6 +26,15 @@ describe("fixed decimal quantity operations", () => {
     expect(quantitiesAreCompatible("cm", "m")).toBe(true);
   });
 
+  it("rejects conversions that cannot be represented at six-decimal precision", () => {
+    // 0.0001 g -> kg 需要 10 位小数，超出 numeric(18,6) 尺度，必须报错而非截断。
+    expect(() => convertQuantity("0.0001", "g", "kg")).toThrow("QUANTITY_PRECISION_EXCEEDED");
+    // 0.0001 ml -> l 需要 7 位小数，同样不可表示。
+    expect(() => convertQuantity("0.0001", "ml", "l")).toThrow("QUANTITY_PRECISION_EXCEEDED");
+    // 可整除的换算仍然精确接受。
+    expect(convertQuantity("0.001", "g", "kg")).toBe("0.000001");
+  });
+
   it("enforces positive quantities and two-decimal money", () => {
     expect(positiveQuantity.safeParse("0").success).toBe(false);
     expect(positiveQuantity.safeParse("0.000001").success).toBe(true);
